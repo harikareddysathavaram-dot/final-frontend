@@ -1,0 +1,490 @@
+<div class="dashboard-wrapper">
+  <!-- Header -->
+  <div class="dashboard-header">
+    <div class="header-left">
+      <h1>Employer Dashboard</h1>
+      <p *ngIf="company">{{ company.companyName }} — {{ company.industry }}</p>
+      <p *ngIf="!company">Welcome, {{ userName }}. Register your company to get started.</p>
+    </div>
+  </div>
+
+  <!-- Action Messages -->
+  <div class="alert alert-success" *ngIf="actionMessage">
+    <span>&#10003;</span> {{ actionMessage }}
+    <button class="alert-close" (click)="actionMessage = ''">&times;</button>
+  </div>
+  <div class="alert alert-error" *ngIf="actionError">
+    <span>&#10007;</span> {{ actionError }}
+    <button class="alert-close" (click)="actionError = ''">&times;</button>
+  </div>
+
+  <!-- COMPANY REGISTRATION (if no company) -->
+  <div class="section-card" *ngIf="!company && showCompanyForm && !isLoading">
+    <h3>Register Your Company</h3>
+    <p class="section-desc">Complete the form below to register your company with Hartford Workers' Comp.</p>
+    <form [formGroup]="companyForm" (ngSubmit)="registerCompany()">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Company Name</label>
+          <input type="text" formControlName="companyName" class="form-control" placeholder="Acme Corp" />
+        </div>
+        <div class="form-group">
+          <label>Registration Number</label>
+          <input type="text" formControlName="registrationNumber" class="form-control" placeholder="REG-12345" />
+        </div>
+        <div class="form-group">
+          <label>Tax ID</label>
+          <input type="text" formControlName="taxId" class="form-control" placeholder="XX-XXXXXXX" />
+        </div>
+        <div class="form-group">
+          <label>Industry</label>
+          <select formControlName="industry" class="form-control">
+            <option value="">Select Industry</option>
+            <option value="Construction">Construction</option>
+            <option value="Manufacturing">Manufacturing</option>
+            <option value="Healthcare">Healthcare</option>
+            <option value="Technology">Technology</option>
+            <option value="Retail">Retail</option>
+            <option value="Transportation">Transportation</option>
+            <option value="Agriculture">Agriculture</option>
+            <option value="Education">Education</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-group full-width">
+          <label>Address</label>
+          <input type="text" formControlName="address" class="form-control" placeholder="123 Business Ave, City, State" />
+        </div>
+        <div class="form-group">
+          <label>Phone</label>
+          <input type="text" formControlName="phone" class="form-control" placeholder="+1-555-0100" />
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" formControlName="email" class="form-control" placeholder="contact@company.com" />
+        </div>
+      </div>
+      <button type="submit" class="btn-primary" [disabled]="companyForm.invalid">Register Company</button>
+    </form>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-state" *ngIf="isLoading">
+    <div class="loading-spinner"></div>
+    <p>Loading dashboard data...</p>
+  </div>
+
+  <!-- Main Dashboard (when company exists) -->
+  <ng-container *ngIf="company && !isLoading">
+    <!-- Tab Navigation -->
+    <div class="tab-nav">
+      <button [class.active]="activeTab === 'overview'" (click)="setTab('overview')">Overview</button>
+      <button [class.active]="activeTab === 'employees'" (click)="setTab('employees')">Employees</button>
+      <button [class.active]="activeTab === 'quotations'" (click)="setTab('quotations')">Quotations</button>
+      <button [class.active]="activeTab === 'policies'" (click)="setTab('policies')">Policies</button>
+      <button [class.active]="activeTab === 'claims'" (click)="setTab('claims')">Claims</button>
+      <button [class.active]="activeTab === 'payments'" (click)="setTab('payments')">Payments</button>
+    </div>
+
+    <!-- OVERVIEW TAB -->
+    <div class="tab-content" *ngIf="activeTab === 'overview'">
+      <div class="stats-grid">
+        <div class="stat-card stat-blue">
+          <div class="stat-icon">👥</div>
+          <div class="stat-info">
+            <span class="stat-value">{{ employees.length }}</span>
+            <span class="stat-label">Employees</span>
+          </div>
+        </div>
+        <div class="stat-card stat-green">
+          <div class="stat-icon">📋</div>
+          <div class="stat-info">
+            <span class="stat-value">{{ policies.length }}</span>
+            <span class="stat-label">Policies</span>
+          </div>
+        </div>
+        <div class="stat-card stat-orange">
+          <div class="stat-icon">⚠️</div>
+          <div class="stat-info">
+            <span class="stat-value">{{ claims.length }}</span>
+            <span class="stat-label">Claims</span>
+          </div>
+        </div>
+        <div class="stat-card stat-purple">
+          <div class="stat-icon">💳</div>
+          <div class="stat-info">
+            <span class="stat-value">{{ payments.length }}</span>
+            <span class="stat-label">Payments</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Company Info -->
+      <div class="section-card">
+        <h3>Company Information</h3>
+        <div class="info-grid">
+          <div class="info-item"><span class="info-label">Name</span><span class="info-value">{{ company.companyName }}</span></div>
+          <div class="info-item"><span class="info-label">Industry</span><span class="info-value">{{ company.industry }}</span></div>
+          <div class="info-item"><span class="info-label">Registration #</span><span class="info-value">{{ company.registrationNumber }}</span></div>
+          <div class="info-item"><span class="info-label">Tax ID</span><span class="info-value">{{ company.taxId }}</span></div>
+          <div class="info-item"><span class="info-label">Status</span><span class="badge" [ngClass]="getStatusClass(company.status)">{{ company.status }}</span></div>
+          <div class="info-item"><span class="info-label">Registered</span><span class="info-value">{{ company.createdAt | date:'mediumDate' }}</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EMPLOYEES TAB -->
+    <div class="tab-content" *ngIf="activeTab === 'employees'">
+      <div class="section-card">
+        <div class="section-header">
+          <h3>Employees</h3>
+          <button class="btn-primary" (click)="showEmployeeForm = !showEmployeeForm">
+            {{ showEmployeeForm ? 'Cancel' : '+ Add Employee' }}
+          </button>
+        </div>
+
+        <!-- Add Employee Form -->
+        <div class="modal-form" *ngIf="showEmployeeForm">
+          <form [formGroup]="employeeForm" (ngSubmit)="addEmployee()">
+            <div class="form-grid">
+              <div class="form-group"><label>First Name</label><input formControlName="firstName" class="form-control" /></div>
+              <div class="form-group"><label>Last Name</label><input formControlName="lastName" class="form-control" /></div>
+              <div class="form-group"><label>Email</label><input type="email" formControlName="email" class="form-control" /></div>
+              <div class="form-group"><label>Phone</label><input formControlName="phone" class="form-control" /></div>
+              <div class="form-group"><label>National ID</label><input formControlName="nationalId" class="form-control" /></div>
+              <div class="form-group"><label>Designation</label><input formControlName="designation" class="form-control" /></div>
+              <div class="form-group"><label>Department</label><input formControlName="department" class="form-control" /></div>
+              <div class="form-group"><label>Monthly Salary</label><input type="number" formControlName="monthlySalary" class="form-control" /></div>
+              <div class="form-group"><label>Date of Birth</label><input type="date" formControlName="dateOfBirth" class="form-control" /></div>
+              <div class="form-group"><label>Date of Joining</label><input type="date" formControlName="dateOfJoining" class="form-control" /></div>
+            </div>
+            <button type="submit" class="btn-primary" [disabled]="employeeForm.invalid">Add Employee</button>
+          </form>
+        </div>
+
+        <!-- Employee Table -->
+        <div class="table-wrapper" *ngIf="employees.length > 0">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Department</th>
+                <th>Designation</th>
+                <th>Salary</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let emp of employees">
+                <td class="fw-600">{{ emp.firstName }} {{ emp.lastName }}</td>
+                <td>{{ emp.email }}</td>
+                <td>{{ emp.department }}</td>
+                <td>{{ emp.designation }}</td>
+                <td>&#36;{{ emp.monthlySalary | number:'1.2-2' }}</td>
+                <td><span class="badge" [ngClass]="emp.isActive ? 'badge-success' : 'badge-danger'">{{ emp.isActive ? 'Active' : 'Inactive' }}</span></td>
+                <td><button class="btn-action btn-reject" (click)="deleteEmployee(emp.id)">Remove</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="empty-state" *ngIf="employees.length === 0 && !showEmployeeForm">
+          <p>No employees added yet. Click "Add Employee" to get started.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- QUOTATIONS TAB -->
+    <div class="tab-content" *ngIf="activeTab === 'quotations'">
+      <div class="section-card">
+        <div class="section-header">
+          <h3>Insurance Quotations</h3>
+          <button class="btn-primary" (click)="showQuotationForm = !showQuotationForm">
+            {{ showQuotationForm ? 'Cancel' : '+ Request Quotation' }}
+          </button>
+        </div>
+
+        <!-- Quotation Form -->
+        <div class="modal-form" *ngIf="showQuotationForm">
+          <form [formGroup]="quotationForm" (ngSubmit)="requestQuotation()">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Industry Type</label>
+                <select formControlName="industryType" class="form-control">
+                  <option value="">Select</option>
+                  <option value="Construction">Construction</option>
+                  <option value="Manufacturing">Manufacturing</option>
+                  <option value="Healthcare">Healthcare</option>
+                  <option value="Technology">Technology</option>
+                  <option value="Retail">Retail</option>
+                  <option value="Transportation">Transportation</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Total Employees</label><input type="number" formControlName="totalEmployees" class="form-control" /></div>
+              <div class="form-group"><label>Estimated Annual Payroll ($)</label><input type="number" formControlName="estimatedAnnualPayroll" class="form-control" /></div>
+            </div>
+            <button type="submit" class="btn-primary" [disabled]="quotationForm.invalid">Get Quotation</button>
+          </form>
+        </div>
+
+        <!-- Quotations Table -->
+        <div class="table-wrapper" *ngIf="quotations.length > 0">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Quotation #</th>
+                <th>Industry</th>
+                <th>Employees</th>
+                <th>Annual Payroll</th>
+                <th>Premium</th>
+                <th>Status</th>
+                <th>Valid Until</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let q of quotations">
+                <td class="mono">{{ q.quotationNumber }}</td>
+                <td>{{ q.industryType }}</td>
+                <td>{{ q.totalEmployees }}</td>
+                <td>&#36;{{ q.estimatedAnnualPayroll | number:'1.0-0' }}</td>
+                <td class="fw-600">&#36;{{ q.calculatedPremium | number:'1.2-2' }}</td>
+                <td><span class="badge" [ngClass]="getStatusClass(q.status)">{{ q.status }}</span></td>
+                <td>{{ q.validUntil | date:'mediumDate' }}</td>
+                <td>
+                  <button class="btn-action btn-approve" *ngIf="q.status !== 'Accepted'" (click)="acceptQuotation(q.id)">Accept</button>
+                  <span class="text-muted" *ngIf="q.status === 'Accepted'">Accepted</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="empty-state" *ngIf="quotations.length === 0 && !showQuotationForm">
+          <p>No quotations yet. Request one to get your premium calculated.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- POLICIES TAB -->
+    <div class="tab-content" *ngIf="activeTab === 'policies'">
+      <div class="section-card">
+        <h3>Your Policies</h3>
+
+        <div *ngIf="policies.length > 0">
+          <div class="policy-card" *ngFor="let policy of policies">
+            <div class="policy-header">
+              <div>
+                <span class="policy-number">{{ policy.policyNumber }}</span>
+                <span class="badge" [ngClass]="getStatusClass(policy.status)">{{ policy.status }}</span>
+              </div>
+              <button class="btn-primary btn-sm" (click)="openCoverageForm(policy.id)">+ Add Coverage</button>
+            </div>
+            <div class="info-grid">
+              <div class="info-item"><span class="info-label">Premium</span><span class="info-value">&#36;{{ policy.annualPremium | number:'1.2-2' }}/yr</span></div>
+              <div class="info-item"><span class="info-label">Coverage</span><span class="info-value">&#36;{{ policy.coverageAmount | number:'1.0-0' }}</span></div>
+              <div class="info-item"><span class="info-label">Effective</span><span class="info-value">{{ policy.effectiveDate | date:'mediumDate' }}</span></div>
+              <div class="info-item"><span class="info-label">Expires</span><span class="info-value">{{ policy.expirationDate | date:'mediumDate' }}</span></div>
+            </div>
+            <div class="coverage-section" *ngIf="policy.coveredEmployees && policy.coveredEmployees.length > 0">
+              <h4>Covered Employees ({{ policy.coveredEmployees.length }})</h4>
+              <div class="coverage-list">
+                <div class="coverage-item" *ngFor="let ce of policy.coveredEmployees">
+                  <span>{{ ce.employeeName }}</span>
+                  <span class="badge" [ngClass]="getStatusClass(ce.coverageStatus)">{{ ce.coverageStatus }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Add Coverage Modal -->
+        <div class="modal-form" *ngIf="showCoverageForm">
+          <h4>Add Employee to Coverage</h4>
+          <form [formGroup]="coverageForm" (ngSubmit)="addCoverage()">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Employee</label>
+                <select formControlName="employeeId" class="form-control" (change)="onCoverageEmployeeSelected()">
+                  <option value="">Select Employee</option>
+                  <option *ngFor="let emp of employees" [value]="emp.id">{{ emp.firstName }} {{ emp.lastName }}</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Employee Name</label>
+                <input formControlName="employeeName" class="form-control" readonly />
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn-primary" [disabled]="coverageForm.invalid">Add Coverage</button>
+              <button type="button" class="btn-secondary" (click)="showCoverageForm = false">Cancel</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="empty-state" *ngIf="policies.length === 0">
+          <p>No policies yet. Accept a quotation to create a policy.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- CLAIMS TAB -->
+    <div class="tab-content" *ngIf="activeTab === 'claims'">
+      <div class="section-card">
+        <div class="section-header">
+          <h3>Claims</h3>
+          <button class="btn-primary" (click)="showClaimForm = !showClaimForm">
+            {{ showClaimForm ? 'Cancel' : '+ Submit Claim' }}
+          </button>
+        </div>
+
+        <!-- Claim Form -->
+        <div class="modal-form" *ngIf="showClaimForm">
+          <form [formGroup]="claimForm" (ngSubmit)="submitClaim()">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Policy</label>
+                <select formControlName="policyId" class="form-control">
+                  <option value="">Select Policy</option>
+                  <option *ngFor="let p of policies" [value]="p.id">{{ p.policyNumber }}</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Employee</label>
+                <select formControlName="employeeId" class="form-control" (change)="onEmployeeSelected()">
+                  <option value="">Select Employee</option>
+                  <option *ngFor="let emp of employees" [value]="emp.id">{{ emp.firstName }} {{ emp.lastName }}</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Employee Name</label><input formControlName="employeeName" class="form-control" readonly /></div>
+              <div class="form-group"><label>Incident Date</label><input type="date" formControlName="incidentDate" class="form-control" /></div>
+              <div class="form-group">
+                <label>Injury Type</label>
+                <select formControlName="injuryType" class="form-control">
+                  <option value="">Select</option>
+                  <option value="Fracture">Fracture</option>
+                  <option value="Burns">Burns</option>
+                  <option value="Sprain">Sprain</option>
+                  <option value="Laceration">Laceration</option>
+                  <option value="Concussion">Concussion</option>
+                  <option value="RepetitiveStrain">Repetitive Strain</option>
+                  <option value="ChemicalExposure">Chemical Exposure</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Estimated Claim Amount ($)</label><input type="number" formControlName="estimatedClaimAmount" class="form-control" /></div>
+              <div class="form-group full-width"><label>Description</label><textarea formControlName="description" class="form-control" rows="3" placeholder="Describe the incident..."></textarea></div>
+            </div>
+            <button type="submit" class="btn-primary" [disabled]="claimForm.invalid">Submit Claim</button>
+          </form>
+        </div>
+
+        <!-- Claims Table -->
+        <div class="table-wrapper" *ngIf="claims.length > 0">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Claim #</th>
+                <th>Employee</th>
+                <th>Injury</th>
+                <th>Estimated</th>
+                <th>Approved</th>
+                <th>Status</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let claim of claims">
+                <td class="mono">{{ claim.claimNumber }}</td>
+                <td>{{ claim.employeeName }}</td>
+                <td>{{ claim.injuryType }}</td>
+                <td>&#36;{{ claim.estimatedClaimAmount | number:'1.2-2' }}</td>
+                <td>{{ claim.approvedAmount ? ('$' + (claim.approvedAmount | number:'1.2-2')) : '—' }}</td>
+                <td><span class="badge" [ngClass]="getStatusClass(claim.status)">{{ claim.status }}</span></td>
+                <td>{{ claim.createdAt | date:'mediumDate' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="empty-state" *ngIf="claims.length === 0 && !showClaimForm">
+          <p>No claims submitted yet.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAYMENTS TAB -->
+    <div class="tab-content" *ngIf="activeTab === 'payments'">
+      <div class="section-card">
+        <div class="section-header">
+          <h3>Payments</h3>
+          <button class="btn-primary" (click)="showPaymentForm = !showPaymentForm">
+            {{ showPaymentForm ? 'Cancel' : '+ Make Payment' }}
+          </button>
+        </div>
+
+        <!-- Payment Form -->
+        <div class="modal-form" *ngIf="showPaymentForm">
+          <form [formGroup]="paymentForm" (ngSubmit)="makePayment()">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Reference Type</label>
+                <select formControlName="referenceType" class="form-control">
+                  <option value="Premium">Premium Payment</option>
+                  <option value="Claim">Claim Payment</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Reference ID (Policy/Claim ID)</label>
+                <input formControlName="referenceId" class="form-control" placeholder="Enter ID" />
+              </div>
+              <div class="form-group"><label>Amount ($)</label><input type="number" formControlName="amount" class="form-control" /></div>
+              <div class="form-group">
+                <label>Payment Method</label>
+                <select formControlName="paymentMethod" class="form-control">
+                  <option value="CreditCard">Credit Card</option>
+                  <option value="DebitCard">Debit Card</option>
+                  <option value="BankTransfer">Bank Transfer</option>
+                  <option value="Check">Check</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Card/Account Last 4 Digits</label><input formControlName="cardOrAccountLast4" class="form-control" placeholder="1234" maxlength="4" /></div>
+            </div>
+            <button type="submit" class="btn-primary" [disabled]="paymentForm.invalid">Process Payment</button>
+          </form>
+        </div>
+
+        <!-- Payments Table -->
+        <div class="table-wrapper" *ngIf="payments.length > 0">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Transaction Ref</th>
+                <th>Type</th>
+                <th>Amount</th>
+                <th>Method</th>
+                <th>Receipt #</th>
+                <th>Status</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let p of payments">
+                <td class="mono">{{ p.transactionReference }}</td>
+                <td>{{ p.referenceType }}</td>
+                <td class="fw-600">&#36;{{ p.amount | number:'1.2-2' }}</td>
+                <td>{{ p.paymentMethod }}</td>
+                <td class="mono">{{ p.receiptNumber }}</td>
+                <td><span class="badge" [ngClass]="getStatusClass(p.status)">{{ p.status }}</span></td>
+                <td>{{ p.createdAt | date:'mediumDate' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="empty-state" *ngIf="payments.length === 0 && !showPaymentForm">
+          <p>No payments processed yet.</p>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+</div>

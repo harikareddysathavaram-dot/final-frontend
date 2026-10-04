@@ -1,0 +1,231 @@
+<div class="dashboard-wrapper">
+  <!-- Header -->
+  <div class="dashboard-header">
+    <div class="header-left">
+      <h1>Surveyor Dashboard</h1>
+      <p>Welcome, {{ userName }}. Review and process insurance claims.</p>
+    </div>
+    <div class="header-right">
+      <div class="header-stats">
+        <div class="mini-stat">
+          <span class="mini-stat-value">{{ pendingClaims.length }}</span>
+          <span class="mini-stat-label">Pending</span>
+        </div>
+        <div class="mini-stat">
+          <span class="mini-stat-value">{{ reviewedClaims.length }}</span>
+          <span class="mini-stat-label">Reviewed</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Messages -->
+  <div class="alert alert-success" *ngIf="actionMessage">
+    <span>&#10003;</span> {{ actionMessage }}
+    <button class="alert-close" (click)="actionMessage = ''">&times;</button>
+  </div>
+  <div class="alert alert-error" *ngIf="actionError">
+    <span>&#10007;</span> {{ actionError }}
+    <button class="alert-close" (click)="actionError = ''">&times;</button>
+  </div>
+
+  <!-- Tab Navigation -->
+  <div class="tab-nav">
+    <button [class.active]="activeTab === 'pending'" (click)="setTab('pending')">
+      Pending Review
+      <span class="tab-count" *ngIf="pendingClaims.length > 0">{{ pendingClaims.length }}</span>
+    </button>
+    <button [class.active]="activeTab === 'reviewed'" (click)="setTab('reviewed')">Reviewed Claims</button>
+    <button [class.active]="activeTab === 'all'" (click)="setTab('all')">All Claims</button>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-state" *ngIf="isLoading">
+    <div class="loading-spinner"></div>
+    <p>Loading claims...</p>
+  </div>
+
+  <!-- PENDING TAB -->
+  <div class="tab-content" *ngIf="!isLoading && activeTab === 'pending'">
+    <div class="claims-grid" *ngIf="pendingClaims.length > 0">
+      <div class="claim-card" *ngFor="let claim of pendingClaims">
+        <div class="claim-card-header">
+          <span class="claim-number">{{ claim.claimNumber }}</span>
+          <span class="badge" [ngClass]="getStatusClass(claim.status)">{{ claim.status }}</span>
+        </div>
+        <div class="claim-card-body">
+          <div class="claim-detail">
+            <span class="detail-label">Employee</span>
+            <span class="detail-value">{{ claim.employeeName }}</span>
+          </div>
+          <div class="claim-detail">
+            <span class="detail-label">Injury Type</span>
+            <span class="detail-value">{{ claim.injuryType }}</span>
+          </div>
+          <div class="claim-detail">
+            <span class="detail-label">Incident Date</span>
+            <span class="detail-value">{{ claim.incidentDate | date:'mediumDate' }}</span>
+          </div>
+          <div class="claim-detail">
+            <span class="detail-label">Estimated Amount</span>
+            <span class="detail-value fw-600">&#36;{{ claim.estimatedClaimAmount | number:'1.2-2' }}</span>
+          </div>
+          <div class="claim-description">
+            <span class="detail-label">Description</span>
+            <p>{{ claim.description }}</p>
+          </div>
+        </div>
+        <div class="claim-card-footer">
+          <button class="btn-review" (click)="openReview(claim)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Review Claim
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="empty-state" *ngIf="pendingClaims.length === 0">
+      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      <h3>All caught up!</h3>
+      <p>No claims are awaiting your review.</p>
+    </div>
+  </div>
+
+  <!-- REVIEWED TAB -->
+  <div class="tab-content" *ngIf="!isLoading && activeTab === 'reviewed'">
+    <div class="section-card">
+      <div class="table-wrapper" *ngIf="reviewedClaims.length > 0">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Claim #</th>
+              <th>Employee</th>
+              <th>Injury</th>
+              <th>Estimated</th>
+              <th>Approved</th>
+              <th>Status</th>
+              <th>Notes</th>
+              <th>Processed</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let claim of reviewedClaims">
+              <td class="mono">{{ claim.claimNumber }}</td>
+              <td>{{ claim.employeeName }}</td>
+              <td>{{ claim.injuryType }}</td>
+              <td>&#36;{{ claim.estimatedClaimAmount | number:'1.2-2' }}</td>
+              <td class="fw-600">{{ claim.approvedAmount ? ('$' + (claim.approvedAmount | number:'1.2-2')) : '—' }}</td>
+              <td><span class="badge" [ngClass]="getStatusClass(claim.status)">{{ claim.status }}</span></td>
+              <td class="notes-cell">{{ claim.surveyorNotes || '—' }}</td>
+              <td>{{ claim.processedAt ? (claim.processedAt | date:'mediumDate') : '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="empty-state" *ngIf="reviewedClaims.length === 0">
+        <p>No reviewed claims yet.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ALL CLAIMS TAB -->
+  <div class="tab-content" *ngIf="!isLoading && activeTab === 'all'">
+    <div class="section-card">
+      <div class="table-wrapper" *ngIf="claims.length > 0">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Claim #</th>
+              <th>Employee</th>
+              <th>Injury</th>
+              <th>Estimated</th>
+              <th>Approved</th>
+              <th>Status</th>
+              <th>Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let claim of claims">
+              <td class="mono">{{ claim.claimNumber }}</td>
+              <td>{{ claim.employeeName }}</td>
+              <td>{{ claim.injuryType }}</td>
+              <td>&#36;{{ claim.estimatedClaimAmount | number:'1.2-2' }}</td>
+              <td>{{ claim.approvedAmount ? ('$' + (claim.approvedAmount | number:'1.2-2')) : '—' }}</td>
+              <td><span class="badge" [ngClass]="getStatusClass(claim.status)">{{ claim.status }}</span></td>
+              <td>{{ claim.createdAt | date:'mediumDate' }}</td>
+              <td>
+                <button class="btn-action btn-approve" *ngIf="claim.status === 'Submitted' || claim.status === 'UnderReview'" (click)="openReview(claim)">Review</button>
+                <span class="text-muted" *ngIf="claim.status !== 'Submitted' && claim.status !== 'UnderReview'">Done</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="empty-state" *ngIf="claims.length === 0">
+        <p>No claims in the system.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- REVIEW MODAL -->
+  <div class="modal-overlay" *ngIf="showReviewModal" (click)="closeReview()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Review Claim {{ selectedClaim?.claimNumber }}</h3>
+        <button class="modal-close" (click)="closeReview()">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="claim-summary">
+          <div class="summary-row">
+            <span class="summary-label">Employee:</span>
+            <span>{{ selectedClaim?.employeeName }}</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Injury Type:</span>
+            <span>{{ selectedClaim?.injuryType }}</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Description:</span>
+            <span>{{ selectedClaim?.description }}</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Estimated Amount:</span>
+            <span class="fw-600">&#36;{{ selectedClaim?.estimatedClaimAmount | number:'1.2-2' }}</span>
+          </div>
+        </div>
+
+        <form [formGroup]="reviewForm" (ngSubmit)="submitReview()">
+          <div class="form-group">
+            <label>Decision</label>
+            <div class="radio-group">
+              <label class="radio-option approved">
+                <input type="radio" formControlName="status" value="Approved" />
+                <span class="radio-label">&#10003; Approve</span>
+              </label>
+              <label class="radio-option rejected">
+                <input type="radio" formControlName="status" value="Rejected" />
+                <span class="radio-label">&#10007; Reject</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Approved Amount ($)</label>
+            <input type="number" formControlName="approvedAmount" class="form-control" />
+          </div>
+
+          <div class="form-group">
+            <label>Surveyor Notes</label>
+            <textarea formControlName="surveyorNotes" class="form-control" rows="4" placeholder="Provide detailed notes about your assessment..."></textarea>
+          </div>
+
+          <div class="modal-actions">
+            <button type="submit" class="btn-primary" [disabled]="reviewForm.invalid">Submit Review</button>
+            <button type="button" class="btn-secondary" (click)="closeReview()">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
